@@ -8,9 +8,3 @@
 /coverage
 
 /node_modules
-
-#codegen
-generated
-
-# schemas
-*.gql
