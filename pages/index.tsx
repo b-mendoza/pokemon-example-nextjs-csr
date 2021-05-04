@@ -1,5 +1,3 @@
-/* eslint-disable jsx-a11y/anchor-is-valid */
-
 import axios from 'axios';
 import { Pokemon } from 'models';
 import Head from 'next/head';
@@ -7,7 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Card, CardColumns, Container, FormControl } from 'react-bootstrap';
 import { useQuery } from 'react-query';
-// import LinkTo from 'components/LinkTo';
+import LinkTo from 'components/LinkTo';
 
 type FormControlElement =
   | HTMLInputElement

@@ -1,5 +1,3 @@
-/* eslint-disable jsx-a11y/anchor-is-valid */
-
 import axios from 'axios';
 import { Pokemon as PokemonType } from 'models';
 import Head from 'next/head';
@@ -8,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Col, Container, Row } from 'react-bootstrap';
 import { useQuery } from 'react-query';
-// import LinkTo from 'components/LinkTo';
+import LinkTo from 'components/LinkTo';
 
 const getPokemon = async (_: string, name: string) => {
   const { data } = await axios.get<PokemonType>(
