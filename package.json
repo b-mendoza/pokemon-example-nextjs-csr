@@ -1,9 +1,8 @@
 {
   "name": "csr",
-  "version": "0.1.0",
   "private": true,
+  "version": "0.1.0",
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
     "build:pre-rendered": "next build && next export",
     "start": "next start"
