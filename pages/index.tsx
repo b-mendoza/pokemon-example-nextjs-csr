@@ -1,84 +1,90 @@
-import axios from 'axios';
-import { Pokemon } from 'models';
+import debounce from 'lodash.debounce';
+import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useState } from 'react';
-import { Card, CardColumns, Container, FormControl } from 'react-bootstrap';
-import { useQuery } from 'react-query';
-import LinkTo from 'components/LinkTo';
+import { useMemo } from 'react';
+import { Col, Container, FormControl, Row } from 'react-bootstrap';
+import useSWR from 'swr';
 
-type FormControlElement =
-  | HTMLInputElement
-  | HTMLSelectElement
-  | HTMLTextAreaElement;
+import { searchPokemons } from 'services/searchPokemons';
 
-const getPokemon = async (_: string, query: string) => {
-  const { data } = await axios.get<Pokemon[]>(`/api/search?q=${escape(query)}`);
+import { SearchPokemonsAPIResponse } from 'typings/api';
 
-  return data.map(pokemon => ({
-    ...pokemon,
-    image: `/pokemon/${pokemon.name.english
-      .toLowerCase()
-      .replace(' ', '-')}.jpg`,
-  }));
-};
+const LazyPokemonCard = dynamic(() => import('components/PokemonCard'));
 
 function Home() {
-  const [query, setQuery] = useState('');
-
-  const { data } = useQuery(['searchQuery', query], () =>
-    getPokemon('searchQuery', query),
+  const { mutate, data: response } = useSWR<SearchPokemonsAPIResponse, Error>(
+    `/api/search?q=${encodeURI('')}`,
   );
 
-  const handleSearch = (event: React.ChangeEvent<FormControlElement>) => {
-    const input = event.target as HTMLInputElement;
-    const inputValue = input.value;
+  const pokemonList = response?.pokemonList;
 
-    setQuery(inputValue);
-  };
+  const debouncedHandleSearch = useMemo(
+    () =>
+      debounce<
+        NonNullable<React.ComponentProps<typeof FormControl>['onChange']>
+      >(async (event) => {
+        const input = event.target as HTMLInputElement;
+
+        const inputValue = input.value;
+
+        try {
+          const data = await searchPokemons(inputValue);
+
+          await mutate(data, false);
+        } catch {
+          console.error('__ERROR__', 'Fetching more Pokemons');
+        }
+      }, 500),
+    [mutate],
+  );
 
   return (
     <>
-      <div className="container">
-        <Head>
-          <title>Pokemon</title>
-          <link rel="icon" href="/favicon.ico" />
-        </Head>
+      <Head>
+        <title>Pokemon</title>
+      </Head>
 
-        <Container>
+      <main>
+        <Container className="p-0">
           <FormControl
             aria-label="Search"
+            className="mb-4"
+            disabled={!pokemonList}
             placeholder="Search"
-            value={query}
-            onChange={handleSearch}
+            onChange={debouncedHandleSearch}
           />
 
-          <br />
+          {pokemonList ? (
+            pokemonList.length ? (
+              <Row xs={1} md={2} lg={3} xl={4}>
+                {pokemonList.map((pokemon) => {
+                  const { id, name } = pokemon;
 
-          {data ? (
-            <CardColumns>
-              {data.map(({ id, name, type, image }) => (
-                <Link key={id} href={`/pokemon/${name.english}`}>
-                  <a>
-                    <Card>
-                      <Card.Img variant="top" src={image} />
-
-                      <Card.Body>
-                        <Card.Title>{name.english}</Card.Title>
-                        <Card.Subtitle>{type.join(', ')}</Card.Subtitle>
-                      </Card.Body>
-                    </Card>
-                  </a>
-                </Link>
-              ))}
-            </CardColumns>
-          ) : null}
+                  return (
+                    <Col key={id} className="mb-4">
+                      <Link
+                        href={`/pokemon/${encodeURI(name.english)}`}
+                        prefetch={false}
+                      >
+                        <a>
+                          <LazyPokemonCard {...pokemon} />
+                        </a>
+                      </Link>
+                    </Col>
+                  );
+                })}
+              </Row>
+            ) : null
+          ) : (
+            <h1>Loading . . .</h1>
+          )}
         </Container>
-      </div>
+      </main>
 
       <style jsx>{`
-        div {
-          padding: 3rem;
+        main {
+          padding: 1.5rem;
         }
       `}</style>
     </>
