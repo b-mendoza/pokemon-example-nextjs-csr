@@ -1,84 +1,88 @@
-import axios from 'axios';
-import { Pokemon as PokemonType } from 'models';
+import dynamic from 'next/dynamic';
 import Head from 'next/head';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Col, Container, Row } from 'react-bootstrap';
-import { useQuery } from 'react-query';
-import LinkTo from 'components/LinkTo';
+import { Container } from 'react-bootstrap';
+import useSWR from 'swr';
 
-const getPokemon = async (_: string, name: string) => {
-  const { data } = await axios.get<PokemonType>(
-    `/api/pokemon?name=${escape(name)}`,
-  );
+import { GetPokemonAPIResponse } from 'typings/api';
 
-  return data;
-};
+const LazyPokemonData = dynamic(() => import('components/PokemonData'));
 
-function Pokemon() {
+function PokemonView() {
   const router = useRouter();
 
-  const { data } = useQuery(['pokemonName', router.query.name], () =>
-    getPokemon('pokemonName', router.query.name as string),
+  const { name: pokemonName } = router.query;
+
+  const { data: response, error } = useSWR<GetPokemonAPIResponse, Error>(
+    router.isReady && typeof pokemonName === 'string'
+      ? `/api/pokemon?name=${encodeURI(pokemonName)}`
+      : null,
   );
+
+  if (error) {
+    return (
+      <>
+        <Head>
+          <title>Pokemon</title>
+        </Head>
+
+        <main className="p-4">
+          <Container>
+            <h1>{error.message}</h1>
+          </Container>
+        </main>
+      </>
+    );
+  }
+
+  if (!response) {
+    return (
+      <>
+        <Head>
+          <title>Pokemon</title>
+        </Head>
+
+        <main className="p-4">
+          <Container>
+            <h1>Loading . . .</h1>
+          </Container>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
-      <div>
-        <Head>
-          <title>{(data ? data.name.english : null) || 'Pokemon'}</title>
-        </Head>
+      <Head>
+        <title>
+          {'pokemon' in response ? response.pokemon.name : 'Pokemon'}
+        </title>
+      </Head>
 
+      <main className="p-4">
         <Container>
-          {data ? (
+          {'message' in response ? (
+            <h1>{response.message}</h1>
+          ) : (
             <>
-              <Row>
-                <Col xs={6}>
-                  <h1>{data.name.english}</h1>
+              <LazyPokemonData {...response.pokemon} />
 
-                  <br />
-
-                  {Object.entries(data.base).map(([key, value]) => (
-                    <Row key={key}>
-                      <Col xs={3}>
-                        <p>{key}</p>
-                      </Col>
-                      <Col xs={4}>
-                        <h5>{value}</h5>
-                      </Col>
-                    </Row>
-                  ))}
-                </Col>
-
-                <Col xs={6}>
-                  <Image
-                    src={`/pokemon/${data.name.english
-                      .toLowerCase()
-                      .replace(' ', '-')}.jpg`}
-                    height={350}
-                    width={350}
-                  />
-                </Col>
-              </Row>
+              <footer>
+                <Link href="/">
+                  <a>
+                    <p>
+                      <strong>Back to Home</strong>
+                    </p>
+                  </a>
+                </Link>
+              </footer>
             </>
-          ) : null}
-
-          <Link href="/">
-            <a>
-              <h3>Return to Home</h3>
-            </a>
-          </Link>
+          )}
         </Container>
-      </div>
-
-      <style jsx>{`
-        div {
-          padding: 3rem;
-        }
-      `}</style>
+      </main>
     </>
   );
 }
 
-export default Pokemon;
+export default PokemonView;
