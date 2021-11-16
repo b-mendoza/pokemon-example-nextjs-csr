@@ -56,7 +56,7 @@ function PokemonView() {
     <>
       <Head>
         <title>
-          {'pokemon' in response ? response.pokemon.name : 'Pokemon'}
+          {'pokemon' in response ? response.pokemon.name.english : 'Pokemon'}
         </title>
       </Head>
 
